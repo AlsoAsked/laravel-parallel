@@ -21,6 +21,8 @@ trait WithParallelPhyiscalDatabase
 
     private $beforeRefreshParallelPhyiscalDatabaseCallbacks = [];
 
+    private static ?string $parallelDatabaseTemplate = null;
+
     public function useParallelPhyiscalDatabase(): void
     {
         $this->setParallelPhyiscalDatabase();
@@ -59,7 +61,17 @@ trait WithParallelPhyiscalDatabase
 
     protected function refreshParallelPhyiscalDatabase(): void
     {
-        $this->artisan('migrate:fresh', $this->migrateFreshUsing());
+        $databasePath = config('database.connections.'.$this->parallelDatabaseName.'.database');
+
+        if (self::$parallelDatabaseTemplate !== null && File::exists(self::$parallelDatabaseTemplate)) {
+            File::copy(self::$parallelDatabaseTemplate, $databasePath);
+        } else {
+            $this->artisan('migrate:fresh', $this->migrateFreshUsing());
+
+            $templatePath = $databasePath.'.template';
+            File::copy($databasePath, $templatePath);
+            self::$parallelDatabaseTemplate = $templatePath;
+        }
 
         $this->app[Kernel::class]->setArtisan(null);
 
