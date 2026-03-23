@@ -10,10 +10,17 @@ class ParallelServiceProvider extends ServiceProvider
 {
     public function register()
     {
+        $databaseName = 'laravel-parallel.sqlite';
+        $testToken = \getenv('UNIQUE_TEST_TOKEN');
+
+        if ($testToken) {
+            $databaseName = $testToken . '_' . $databaseName;
+        }
+
         config([
             'database.connections.laravel-parallel' => [
                 'driver' => 'sqlite',
-                'database' => database_path('laravel-parallel.sqlite'),
+                'database' => database_path($databaseName),
                 'prefix' => '',
                 'foreign_key_constraints' => true,
             ],
