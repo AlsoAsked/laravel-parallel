@@ -25,6 +25,27 @@ trait WithParallelPhyiscalDatabase
 
     public function useParallelPhyiscalDatabase(): void
     {
+        // when RefreshDatabase is in use, it wraps the default connection in a
+        // transaction.
+        // since setParallelPhyiscalDatabase() changes database.default to the
+        // parallel connection, RefreshDatabase's teardown callback will target
+        // the wrong connection and never roll back the original transaction
+        // roll it back now (before the config change) so the cached in-memory
+        // PDO is clean for the next test.
+        $uses = array_flip(class_uses_recursive(static::class));
+
+        if (array_key_exists(RefreshDatabase::class, $uses)) {
+            $database = $this->app->make('db');
+
+            foreach ($this->connectionsToTransact() as $name) {
+                $connection = $database->connection($name);
+
+                if ($connection->getPdo()->inTransaction()) {
+                    $connection->rollBack();
+                }
+            }
+        }
+
         $this->setParallelPhyiscalDatabase();
         $this->callBeforeRefreshParallelPhyiscalDatabase();
         $this->refreshParallelPhyiscalDatabase();
